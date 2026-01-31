@@ -5,7 +5,7 @@ WORKDIR /app
 
 FROM chef AS planner
 COPY Cargo.toml Cargo.lock ./
-COPY src ./src
+RUN mkdir src && echo "fn main() {}" > src/main.rs
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
