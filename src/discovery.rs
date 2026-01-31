@@ -60,52 +60,70 @@ impl WebhookLookup for Discovery {
 impl Discovery {
     async fn refresh(&self) {
         debug!("refreshing container label cache");
-        let mut filters = HashMap::new();
-        filters.insert(
-            "label".to_string(),
-            vec![IMAGE_LABEL.to_string(), STOOK_LABEL.to_string()],
-        );
 
-        let opts = ListContainersOptions {
+        let mut stook_filters = HashMap::new();
+        stook_filters.insert("label".to_string(), vec![STOOK_LABEL.to_string()]);
+        let stook_opts = ListContainersOptions {
             all: true,
-            filters,
+            filters: stook_filters,
             ..Default::default()
         };
 
-        match self.docker.list_containers(Some(opts)).await {
-            Ok(containers) => {
-                let mut map = HashMap::new();
-                for container in &containers {
-                    if let Some(labels) = &container.labels {
-                        let stack = match labels.get(COMPOSE_PROJECT_LABEL) {
-                            Some(s) => s,
-                            None => continue,
-                        };
+        let mut image_filters = HashMap::new();
+        image_filters.insert("label".to_string(), vec![IMAGE_LABEL.to_string()]);
+        let image_opts = ListContainersOptions {
+            all: true,
+            filters: image_filters,
+            ..Default::default()
+        };
 
-                        let repo = if let Some(image) = labels.get(IMAGE_LABEL) {
-                            image.clone()
-                        } else if labels.contains_key(STOOK_LABEL) {
-                            let image_ref = container.image.as_deref().unwrap_or("");
-                            repo_from_image(image_ref).to_string()
-                        } else {
-                            continue;
-                        };
+        let (stook_res, image_res) = tokio::join!(
+            self.docker.list_containers(Some(stook_opts)),
+            self.docker.list_containers(Some(image_opts)),
+        );
 
-                        if !repo.is_empty() {
-                            debug!(repo = %repo, stack = %stack, "discovered stack route");
-                            map.insert(repo, stack.clone());
-                        }
-                    }
+        let mut all_containers = Vec::new();
+        let mut had_error = false;
+        for res in [stook_res, image_res] {
+            match res {
+                Ok(c) => all_containers.extend(c),
+                Err(e) => {
+                    error!(error = %e, "failed to query Docker for container labels");
+                    had_error = true;
                 }
-                info!(count = map.len(), "refreshed stack route cache");
-                let mut cache = self.cache.write().await;
-                cache.map = map;
-                cache.updated_at = Some(Instant::now());
-            }
-            Err(e) => {
-                error!(error = %e, "failed to query Docker for container labels");
             }
         }
+        if had_error && all_containers.is_empty() {
+            return;
+        }
+
+        let mut map = HashMap::new();
+        for container in &all_containers {
+            if let Some(labels) = &container.labels {
+                let stack = match labels.get(COMPOSE_PROJECT_LABEL) {
+                    Some(s) => s,
+                    None => continue,
+                };
+
+                let repo = if let Some(image) = labels.get(IMAGE_LABEL) {
+                    image.clone()
+                } else if labels.contains_key(STOOK_LABEL) {
+                    let image_ref = container.image.as_deref().unwrap_or("");
+                    repo_from_image(image_ref).to_string()
+                } else {
+                    continue;
+                };
+
+                if !repo.is_empty() {
+                    debug!(repo = %repo, stack = %stack, "discovered stack route");
+                    map.insert(repo, stack.clone());
+                }
+            }
+        }
+        info!(count = map.len(), "refreshed stack route cache");
+        let mut cache = self.cache.write().await;
+        cache.map = map;
+        cache.updated_at = Some(Instant::now());
     }
 }
 
