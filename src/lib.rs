@@ -1,4 +1,4 @@
 pub mod discovery;
-pub mod forwarder;
+pub mod redeployer;
 pub mod registry;
 pub mod routes;

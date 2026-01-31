@@ -13,7 +13,7 @@ pub trait WebhookLookup: Send + Sync {
 }
 
 const IMAGE_LABEL: &str = "webhook-router.image";
-const URL_LABEL: &str = "webhook-router.url";
+const COMPOSE_PROJECT_LABEL: &str = "com.docker.compose.project";
 
 pub struct Discovery {
     docker: Docker,
@@ -38,7 +38,6 @@ impl Discovery {
             ttl: Duration::from_secs(ttl_secs),
         }))
     }
-
 }
 
 #[async_trait]
@@ -74,15 +73,16 @@ impl Discovery {
                 let mut map = HashMap::new();
                 for container in &containers {
                     if let Some(labels) = &container.labels {
-                        if let (Some(image), Some(url)) =
-                            (labels.get(IMAGE_LABEL), labels.get(URL_LABEL))
-                        {
-                            debug!(image = %image, url = %url, "discovered webhook route");
-                            map.insert(image.clone(), url.clone());
+                        if let (Some(image), Some(stack)) = (
+                            labels.get(IMAGE_LABEL),
+                            labels.get(COMPOSE_PROJECT_LABEL),
+                        ) {
+                            debug!(image = %image, stack = %stack, "discovered stack route");
+                            map.insert(image.clone(), stack.clone());
                         }
                     }
                 }
-                info!(count = map.len(), "refreshed webhook route cache");
+                info!(count = map.len(), "refreshed stack route cache");
                 let mut cache = self.cache.write().await;
                 cache.map = map;
                 cache.updated_at = Some(Instant::now());

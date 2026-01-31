@@ -1,5 +1,5 @@
 mod discovery;
-mod forwarder;
+mod redeployer;
 mod registry;
 mod routes;
 
@@ -10,7 +10,7 @@ use tokio::net::TcpListener;
 use tracing::info;
 
 use discovery::Discovery;
-use forwarder::Forwarder;
+use redeployer::Redeployer;
 use routes::AppState;
 
 #[tokio::main]
@@ -32,12 +32,18 @@ async fn main() {
         .and_then(|v| v.parse().ok())
         .unwrap_or(60);
 
+    let portainer_url = std::env::var("PORTAINER_URL")
+        .unwrap_or_else(|_| "http://portainer:9443".to_string());
+
+    let api_key = std::env::var("PORTAINER_API_KEY")
+        .expect("PORTAINER_API_KEY environment variable is required");
+
     let discovery = Discovery::new(cache_ttl).expect("failed to connect to Docker");
-    let forwarder = Arc::new(Forwarder::new());
+    let redeployer = Arc::new(Redeployer::new(portainer_url, api_key));
 
     let state = Arc::new(AppState {
         discovery,
-        forwarder,
+        redeployer,
     });
 
     let app = Router::new()
