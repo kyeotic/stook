@@ -14,6 +14,7 @@ pub struct Event {
 #[derive(Debug, Deserialize)]
 pub struct Target {
     pub repository: String,
+    #[allow(dead_code)]
     pub tag: Option<String>,
 }
 
