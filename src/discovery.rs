@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use bollard::container::ListContainersOptions;
 use bollard::Docker;
 use std::collections::HashMap;
@@ -5,6 +6,11 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tracing::{debug, error, info};
+
+#[async_trait]
+pub trait WebhookLookup: Send + Sync {
+    async fn lookup(&self, repository: &str) -> Option<String>;
+}
 
 const IMAGE_LABEL: &str = "webhook-router.image";
 const URL_LABEL: &str = "webhook-router.url";
@@ -33,7 +39,11 @@ impl Discovery {
         }))
     }
 
-    pub async fn lookup(&self, repository: &str) -> Option<String> {
+}
+
+#[async_trait]
+impl WebhookLookup for Discovery {
+    async fn lookup(&self, repository: &str) -> Option<String> {
         {
             let cache = self.cache.read().await;
             if let Some(updated_at) = cache.updated_at {
@@ -45,7 +55,9 @@ impl Discovery {
         self.refresh().await;
         self.cache.read().await.map.get(repository).cloned()
     }
+}
 
+impl Discovery {
     async fn refresh(&self) {
         debug!("refreshing container label cache");
         let mut filters = HashMap::new();

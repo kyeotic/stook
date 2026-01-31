@@ -33,7 +33,7 @@ async fn main() {
         .unwrap_or(60);
 
     let discovery = Discovery::new(cache_ttl).expect("failed to connect to Docker");
-    let forwarder = Forwarder::new();
+    let forwarder = Arc::new(Forwarder::new());
 
     let state = Arc::new(AppState {
         discovery,

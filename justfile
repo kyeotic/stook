@@ -13,6 +13,10 @@ build:
 check:
     cargo check
 
+# Run tests
+test:
+    cargo test
+
 # Run clippy lints
 lint:
     cargo clippy -- -D warnings

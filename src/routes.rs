@@ -4,13 +4,13 @@ use axum::Json;
 use std::sync::Arc;
 use tracing::{debug, warn};
 
-use crate::discovery::Discovery;
-use crate::forwarder::Forwarder;
+use crate::discovery::WebhookLookup;
+use crate::forwarder::WebhookForwarder;
 use crate::registry::RegistryNotification;
 
 pub struct AppState {
-    pub discovery: Arc<Discovery>,
-    pub forwarder: Forwarder,
+    pub discovery: Arc<dyn WebhookLookup>,
+    pub forwarder: Arc<dyn WebhookForwarder>,
 }
 
 pub async fn health() -> StatusCode {
