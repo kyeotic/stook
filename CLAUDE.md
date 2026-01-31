@@ -44,7 +44,7 @@ Four modules in `src/`:
 | Variable | Default | Required |
 |----------|---------|----------|
 | `PORTAINER_API_KEY` | — | Yes |
-| `PORTAINER_URL` | `https://portainer:9443` | No |
+| `PORTAINER_URL` | `https://localhost:9443` | No |
 | `LISTEN_PORT` | `3000` | No |
 | `CACHE_TTL_SECS` | `60` | No |
 | `LOG_LEVEL` | `info` | No |

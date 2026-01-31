@@ -19,8 +19,10 @@ services:
 
   webhook-router:
     image: ghcr.io/kyeotic/stook:latest
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
-      # PORTAINER_URL: "https://portainer:9443" # Only needed if non-default
+      PORTAINER_URL: "https://host.docker.internal:9443"
       PORTAINER_API_KEY: "${PORTAINER_API_KEY}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -61,6 +63,10 @@ That's it. Push an image to your registry and stook will redeploy the stack via 
 3. It queries the Docker socket for containers with a `stook` or `stook.image` label and reads the `com.docker.compose.project` label to determine the stack name
 4. It calls the Portainer API to redeploy the stack (pull latest images, preserve env vars and compose file)
 
+## Networking
+
+`PORTAINER_URL` must be reachable from inside the container. Since Portainer typically runs on the host, `host.docker.internal` is the simplest way to reach it. The `extra_hosts` entry maps this hostname to the host's gateway IP (required on Linux; Docker Desktop provides it automatically). Alternatively, you can set `PORTAINER_URL` to the host's IP address directly (e.g., `https://192.168.1.x:9443`) and skip `extra_hosts`.
+
 ## Configuration
 
 | Variable            | Default                 | Description                                        |
@@ -68,7 +74,7 @@ That's it. Push an image to your registry and stook will redeploy the stack via 
 | `LISTEN_PORT`       | `3000`                  | Port to listen on                                  |
 | `CACHE_TTL_SECS`    | `60`                    | Seconds to cache Docker label discovery            |
 | `LOG_LEVEL`         | `info`                  | Log level (trace/debug/info/warn/error)            |
-| `PORTAINER_URL`     | `https://portainer:9443` | Portainer base URL                                 |
+| `PORTAINER_URL`     | `https://localhost:9443` | Portainer base URL                                 |
 | `PORTAINER_API_KEY` | *(required)*            | Portainer API token (create in Portainer UI → API) |
 
 ## API
