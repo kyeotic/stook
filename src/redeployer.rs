@@ -56,7 +56,10 @@ pub struct Redeployer {
 impl Redeployer {
     pub fn new(portainer_url: String, api_key: String) -> Self {
         Self {
-            client: Client::new(),
+            client: Client::builder()
+                .danger_accept_invalid_certs(true)
+                .build()
+                .expect("failed to build HTTP client"),
             portainer_url: portainer_url.trim_end_matches('/').to_string(),
             api_key,
         }

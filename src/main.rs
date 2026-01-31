@@ -33,7 +33,7 @@ async fn main() {
         .unwrap_or(60);
 
     let portainer_url = std::env::var("PORTAINER_URL")
-        .unwrap_or_else(|_| "http://portainer:9443".to_string());
+        .unwrap_or_else(|_| "https://portainer:9443".to_string());
 
     let api_key = std::env::var("PORTAINER_API_KEY")
         .expect("PORTAINER_API_KEY environment variable is required");

@@ -20,7 +20,7 @@ services:
   webhook-router:
     image: ghcr.io/kyeotic/stook:latest
     environment:
-      # PORTAINER_URL: "http://portainer:9443" # Only needed if non-default
+      # PORTAINER_URL: "https://portainer:9443" # Only needed if non-default
       PORTAINER_API_KEY: "${PORTAINER_API_KEY}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -68,7 +68,7 @@ That's it. Push an image to your registry and stook will redeploy the stack via 
 | `LISTEN_PORT`       | `3000`                  | Port to listen on                                  |
 | `CACHE_TTL_SECS`    | `60`                    | Seconds to cache Docker label discovery            |
 | `LOG_LEVEL`         | `info`                  | Log level (trace/debug/info/warn/error)            |
-| `PORTAINER_URL`     | `http://portainer:9443` | Portainer base URL                                 |
+| `PORTAINER_URL`     | `https://portainer:9443` | Portainer base URL                                 |
 | `PORTAINER_API_KEY` | *(required)*            | Portainer API token (create in Portainer UI → API) |
 
 ## API
