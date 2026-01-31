@@ -3,6 +3,12 @@ name: Build and Push
 on:
   push:
     branches: [main]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "Dockerfile"
 
 env:
   REGISTRY: ghcr.io
