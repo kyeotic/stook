@@ -12,7 +12,8 @@ pub trait WebhookLookup: Send + Sync {
     async fn lookup(&self, repository: &str) -> Option<String>;
 }
 
-const IMAGE_LABEL: &str = "webhook-router.image";
+const IMAGE_LABEL: &str = "stook.image";
+const STOOK_LABEL: &str = "stook";
 const COMPOSE_PROJECT_LABEL: &str = "com.docker.compose.project";
 
 pub struct Discovery {
@@ -60,7 +61,10 @@ impl Discovery {
     async fn refresh(&self) {
         debug!("refreshing container label cache");
         let mut filters = HashMap::new();
-        filters.insert("label".to_string(), vec![IMAGE_LABEL.to_string()]);
+        filters.insert(
+            "label".to_string(),
+            vec![IMAGE_LABEL.to_string(), STOOK_LABEL.to_string()],
+        );
 
         let opts = ListContainersOptions {
             all: true,
@@ -73,12 +77,23 @@ impl Discovery {
                 let mut map = HashMap::new();
                 for container in &containers {
                     if let Some(labels) = &container.labels {
-                        if let (Some(image), Some(stack)) = (
-                            labels.get(IMAGE_LABEL),
-                            labels.get(COMPOSE_PROJECT_LABEL),
-                        ) {
-                            debug!(image = %image, stack = %stack, "discovered stack route");
-                            map.insert(image.clone(), stack.clone());
+                        let stack = match labels.get(COMPOSE_PROJECT_LABEL) {
+                            Some(s) => s,
+                            None => continue,
+                        };
+
+                        let repo = if let Some(image) = labels.get(IMAGE_LABEL) {
+                            image.clone()
+                        } else if labels.contains_key(STOOK_LABEL) {
+                            let image_ref = container.image.as_deref().unwrap_or("");
+                            repo_from_image(image_ref).to_string()
+                        } else {
+                            continue;
+                        };
+
+                        if !repo.is_empty() {
+                            debug!(repo = %repo, stack = %stack, "discovered stack route");
+                            map.insert(repo, stack.clone());
                         }
                     }
                 }
@@ -91,5 +106,47 @@ impl Discovery {
                 error!(error = %e, "failed to query Docker for container labels");
             }
         }
+    }
+}
+
+fn repo_from_image(image: &str) -> &str {
+    // Strip :tag from the end
+    let without_tag = match image.rfind(':') {
+        Some(i) => &image[..i],
+        None => image,
+    };
+
+    // If the first segment contains '.' or ':', it's a hostname — strip it
+    match without_tag.find('/') {
+        Some(i) => {
+            let first_segment = &without_tag[..i];
+            if first_segment.contains('.') || first_segment.contains(':') {
+                &without_tag[i + 1..]
+            } else {
+                without_tag
+            }
+        }
+        None => without_tag,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_repo_from_image() {
+        assert_eq!(repo_from_image("registry.local/myrepo:latest"), "myrepo");
+        assert_eq!(
+            repo_from_image("registry.local/org/myrepo:latest"),
+            "org/myrepo"
+        );
+        assert_eq!(repo_from_image("myrepo:latest"), "myrepo");
+        assert_eq!(repo_from_image("myrepo"), "myrepo");
+        assert_eq!(
+            repo_from_image("localhost:5000/myrepo:v1"),
+            "myrepo"
+        );
+        assert_eq!(repo_from_image(""), "");
     }
 }

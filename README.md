@@ -33,8 +33,22 @@ services:
   myapp:
     image: registry.local/myapp:latest
     labels:
-      webhook-router.image: "myapp"
+      stook: redeploy
 ```
+
+The `stook: redeploy` label auto-detects the repository name from the container's image ref (e.g., `registry.local/myapp:latest` → `myapp`).
+
+For explicit control over the repository name, use `stook.image` instead:
+
+```yaml
+services:
+  myapp:
+    image: registry.local/myapp:latest
+    labels:
+      stook.image: "myapp"
+```
+
+If both labels are present, `stook.image` takes precedence.
 
 The stack name is read automatically from the `com.docker.compose.project` label that Docker Compose sets on every container.
 
@@ -44,7 +58,7 @@ That's it. Push an image to your registry and stook will redeploy the stack via 
 
 1. A Docker registry sends push notifications to stook's `/webhook` endpoint
 2. stook extracts the repository name from the notification
-3. It queries the Docker socket for containers with matching `webhook-router.image` labels and reads the `com.docker.compose.project` label to determine the stack name
+3. It queries the Docker socket for containers with a `stook` or `stook.image` label and reads the `com.docker.compose.project` label to determine the stack name
 4. It calls the Portainer API to redeploy the stack (pull latest images, preserve env vars and compose file)
 
 ## Configuration
